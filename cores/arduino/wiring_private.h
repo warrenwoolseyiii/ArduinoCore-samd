@@ -16,7 +16,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#pragma once
+#ifndef WIRING_PRIVATE_H_
+#define WIRING_PRIVATE_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -28,8 +29,8 @@ extern "C" {
 
 // Includes Atmel CMSIS
 #include "sam.h"
-
 #include "wiring_constants.h"
+#include "WVariant.h"
 
 int pinPeripheral( uint32_t ulPin, EPioType ulPeripheral );
 
@@ -37,5 +38,6 @@ int pinPeripheral( uint32_t ulPin, EPioType ulPeripheral );
 } // extern "C"
 
 #include "HardwareSerial.h"
-
 #endif
+
+#endif /* WIRING_PRIVATE_H_ */

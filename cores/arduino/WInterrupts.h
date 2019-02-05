@@ -25,8 +25,6 @@
 extern "C" {
 #endif
 
-//      LOW 0
-//      HIGH 1
 #define CHANGE 2
 #define FALLING 3
 #define RISING 4
@@ -34,18 +32,12 @@ extern "C" {
 #define DEFAULT 1
 #define EXTERNAL 0
 
-typedef void (*voidFuncPtr)(void);
+typedef void ( *voidFuncPtr )( void );
 
-/*
- * \brief Specifies a named Interrupt Service Routine (ISR) to call when an interrupt occurs.
- *        Replaces any previous function that was attached to the interrupt.
- */
-void attachInterrupt(uint32_t pin, voidFuncPtr callback, uint32_t mode);
-
-/*
- * \brief Turns off the given interrupt.
- */
-void detachInterrupt(uint32_t pin);
+void disableExternalInterrupts();
+void interruptlowPowerMode( uint8_t enable );
+void attachInterrupt( uint32_t pin, voidFuncPtr callback, uint32_t mode );
+void detachInterrupt( uint32_t pin );
 
 #ifdef __cplusplus
 }

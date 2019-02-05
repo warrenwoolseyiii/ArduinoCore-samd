@@ -37,6 +37,7 @@ typedef enum _EAnalogChannel
   ADC_Channel5=5,
   ADC_Channel6=6,
   ADC_Channel7=7,
+#ifndef SAMD20
 #if defined __SAMD21J18A__
   ADC_Channel8=8,
   ADC_Channel9=9,
@@ -49,6 +50,18 @@ typedef enum _EAnalogChannel
   ADC_Channel14=14,
   ADC_Channel15=15,
 #endif // __SAMD21J18A__
+#else
+#if defined __SAMD20J18__
+  ADC_Channel8=8,
+  ADC_Channel9=9,
+  ADC_Channel10=10,
+  ADC_Channel11=11,
+  ADC_Channel12=12,
+  ADC_Channel13=13,
+  ADC_Channel14=14,
+  ADC_Channel15=15,
+#endif // __SAMD20J18__
+#endif // SAMD20
   ADC_Channel16=16,
   ADC_Channel17=17,
   ADC_Channel18=18,
@@ -60,6 +73,7 @@ typedef enum _EAnalogChannel
 typedef enum _ETCChannel
 {
   NOT_ON_TIMER=-1,
+#ifndef SAMD20
   TCC0_CH0 = (0<<8)|(0),
   TCC0_CH1 = (0<<8)|(1),
   TCC0_CH2 = (0<<8)|(2),
@@ -76,6 +90,14 @@ typedef enum _ETCChannel
   TCC2_CH1 = (2<<8)|(1),
   TCC2_CH2 = (2<<8)|(0), // Channel 2 is 0!
   TCC2_CH3 = (2<<8)|(1), // Channel 3 is 1!
+#else
+  TC0_CH0 = (0<<8)|(0),
+  TC0_CH1 = (0<<8)|(1),
+  TC1_CH0 = (1<<8)|(0),
+  TC1_CH1 = (1<<8)|(1),
+  TC2_CH0 = (2<<8)|(0),
+  TC2_CH1 = (2<<8)|(1),
+#endif // SAMD20
   TC3_CH0  = (3<<8)|(0),
   TC3_CH1  = (3<<8)|(1),
   TC4_CH0  = (4<<8)|(0),
@@ -90,7 +112,7 @@ typedef enum _ETCChannel
 #endif // __SAMD21J18A__
 } ETCChannel ;
 
-extern const void* g_apTCInstances[TCC_INST_NUM+TC_INST_NUM] ;
+extern const void* g_apTCInstances[TC_INST_NUM] ;
 
 #define GetTCNumber( x ) ( (x) >> 8 )
 #define GetTCChannelNumber( x ) ( (x) & 0xff )
@@ -100,6 +122,7 @@ extern const void* g_apTCInstances[TCC_INST_NUM+TC_INST_NUM] ;
 typedef enum _EPWMChannel
 {
   NOT_ON_PWM=-1,
+#ifndef SAMD20
   PWM0_CH0=TCC0_CH0,
   PWM0_CH1=TCC0_CH1,
   PWM0_CH2=TCC0_CH2,
@@ -116,18 +139,26 @@ typedef enum _EPWMChannel
   PWM2_CH1=TCC2_CH1,
   PWM2_CH2=TCC2_CH2,
   PWM2_CH3=TCC2_CH3,
+#else
+  PWM0_CH0=TC0_CH0,
+  PWM0_CH1=TC0_CH1,
+  PWM1_CH0=TC1_CH0,
+  PWM1_CH1=TC1_CH1,
+  PWM2_CH0=TC2_CH0,
+  PWM2_CH1=TC2_CH1,
+#endif // SAMD20
   PWM3_CH0=TC3_CH0,
   PWM3_CH1=TC3_CH1,
   PWM4_CH0=TC4_CH0,
   PWM4_CH1=TC4_CH1,
   PWM5_CH0=TC5_CH0,
   PWM5_CH1=TC5_CH1,
-#if defined __SAMD21J18A__
+#if (defined(__SAMD21J18A__) || defined(__SAMD20J18__))
   PWM6_CH0=TC6_CH0,
   PWM6_CH1=TC6_CH1,
   PWM7_CH0=TC7_CH0,
   PWM7_CH1=TC7_CH1,
-#endif // __SAMD21J18A__
+#endif // __SAMD21J18A__ || __SAMD20J18__
 } EPWMChannel ;
 
 typedef enum _EPortType
@@ -214,6 +245,7 @@ typedef struct _PinDescription
 extern const PinDescription g_APinDescription[] ;
 
 /* Generic Clock Multiplexer IDs */
+#ifndef SAMD20
 #define GCM_DFLL48M_REF           (0x00U)
 #define GCM_FDPLL96M_INPUT        (0x01U)
 #define GCM_FDPLL96M_32K          (0x02U)
@@ -251,6 +283,36 @@ extern const PinDescription g_APinDescription[] ;
 #define GCM_PTC                   (0x22U)
 #define GCM_I2S_0                 (0x23U)
 #define GCM_I2S_1                 (0x24U)
+#else
+#define GCM_DFLL48M_REF           (0x00U)
+#define GCM_WDT                   (0x01U)
+#define GCM_RTC                   (0x02U)
+#define GCM_EIC                   (0x03U)
+#define GCM_EVSYS_CHANNEL_0       (0x04U)
+#define GCM_EVSYS_CHANNEL_1       (0x05U)
+#define GCM_EVSYS_CHANNEL_2       (0x06U)
+#define GCM_EVSYS_CHANNEL_3       (0x07U)
+#define GCM_EVSYS_CHANNEL_4       (0x08U)
+#define GCM_EVSYS_CHANNEL_5       (0x09U)
+#define GCM_EVSYS_CHANNEL_6       (0x0AU)
+#define GCM_EVSYS_CHANNEL_7       (0x0BU)
+#define GCM_SERCOMx_SLOW          (0x0CU)
+#define GCM_SERCOM0_CORE          (0x0DU)
+#define GCM_SERCOM1_CORE          (0x0EU)
+#define GCM_SERCOM2_CORE          (0x0FU)
+#define GCM_SERCOM3_CORE          (0x10U)
+#define GCM_SERCOM4_CORE          (0x11U)
+#define GCM_SERCOM5_CORE          (0x12U)
+#define GCM_TC0_TC1               (0x13U)
+#define GCM_TC2_TC3               (0x14U)
+#define GCM_TC4_TC5               (0x15U)
+#define GCM_TC6_TC7               (0x16U)
+#define GCM_ADC                   (0x17U)
+#define GCM_AC_DIG                (0x18U)
+#define GCM_AC_ANA                (0x19U)
+#define GCM_DAC                   (0x1AU)
+#define GCM_PTC                   (0x1BU)
+#endif  // SAMD20
 
 #ifdef __cplusplus
 } // extern "C"
