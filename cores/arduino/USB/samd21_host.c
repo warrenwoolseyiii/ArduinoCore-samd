@@ -16,6 +16,7 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#if defined( __SAMD21G18__ )
 
 #include <stdio.h>
 #include <stdint.h>
@@ -516,3 +517,5 @@ uint32_t UHD_Pipe_Is_Transfer_Complete(uint32_t ul_pipe, uint32_t ul_token_type)
 // }
 
 #endif //  HOST_DEFINED
+
+#endif /* __SAMD21G18__ */

@@ -15,20 +15,21 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-/* Emulated EEPROM (EEEPROM) is a software layer of EEPROM that utilizes
- * Flash memory as the underlying storage mechanism. This is NOT an EEPROM
- * driver, it is instead an abstraction layer that lets the user treat a
- * particular portion of Flash memory as EEPROM. Each Flash memory page is laid
- * out in the following manner:
- * Byte[0]                        -> BankID
- * Bytes[1 - _minFlashPageSize]   -> Data
- * Each Flash memory page is treated as a "bank", and a range of EEEPROM
- * addressable space is associated with a bank. For example, if
- * _minFlashPageSize == 256, than EEEPROM addresses 0 to 254 are located
- * in bank 0. Banks are not consecutive in memory and are moved when writes
- * occur with in the bank. This is done in an effort to reduce the write
- * and erase load on each individual Flash memory page.
- */
+
+// Emulated EEPROM (EEEPROM) is a software layer of EEPROM that utilizes
+// Flash memory as the underlying storage mechanism. This is NOT an EEPROM
+// driver, it is instead an abstraction layer that lets the user treat a
+// particular portion of Flash memory as EEPROM. Each Flash memory page is laid
+// out in the following manner:
+// Byte[0]                        -> BankID
+// Bytes[1 - _minFlashPageSize]   -> Data
+// Each Flash memory page is treated as a "bank", and a range of EEEPROM
+// addressable space is associated with a bank. For example, if
+// _minFlashPageSize == 256, than EEEPROM addresses 0 to 254 are located
+// in bank 0. Banks are not consecutive in memory and are moved when writes
+// occur with in the bank. This is done in an effort to reduce the write
+// and erase load on each individual Flash memory page.
+
 #include "EEPROM.h"
 #include "NVM.h"
 

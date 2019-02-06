@@ -33,9 +33,9 @@ typedef uint16_t word;
 // some libraries and sketches depend on this AVR stuff,
 // assuming Arduino.h or WProgram.h automatically includes it...
 //
-#include "pgmspace.h"
-#include "interrupt.h"
-#include "io.h"
+#include "avr/pgmspace.h"
+#include "avr/interrupt.h"
+#include "avr/io.h"
 
 #include "binary.h"
 #include "itoa.h"
@@ -102,7 +102,7 @@ void loop( void );
 #include "wiring_shift.h"
 #include "WInterrupts.h"
 
-// undefine stdlib's abs if encountered
+// Un-define stdlib's abs if encountered
 #ifdef abs
 #undef abs
 #endif // abs
@@ -136,5 +136,13 @@ void loop( void );
 // Interrupts
 #define digitalPinToInterrupt( P ) ( P )
 #endif
+
+// USB
+#if defined( __SAMD21G18__ )
+#include "USB/USBDesc.h"
+#include "USB/USBCore.h"
+#include "USB/USBAPI.h"
+#include "USB/USB_host.h"
+#endif /* __SAMD21G18__ */
 
 #endif // Arduino_h

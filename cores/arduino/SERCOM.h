@@ -16,8 +16,8 @@
   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef _SERCOM_CLASS_
-#define _SERCOM_CLASS_
+#ifndef SERCOM_H_
+#define SERCOM_H_
 
 #include "sam.h"
 
@@ -198,7 +198,7 @@ class SERCOM
     uint8_t readDataWIRE( void );
 
   private:
-    Sercom *   sercom;
+    Sercom *   _sercom;
     SercomMode _mode;
     uint8_t    calculateBaudrateSynchronous( uint32_t baudrate );
     uint32_t   division( uint32_t dividend, uint32_t divisor );
@@ -207,4 +207,4 @@ class SERCOM
     void       takeDownMode();
 };
 
-#endif
+#endif /* SERCOM_H_ */

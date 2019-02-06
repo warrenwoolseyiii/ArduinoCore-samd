@@ -55,7 +55,7 @@ static void syncTC_16( Tc *TCx )
         ;
 }
 
-#ifndef SAMD20
+#if defined( __SAMD21G18__ )
 // Wait for synchronization of registers between the clock domains
 static __inline__ void syncTCC( Tcc *TCCx )
     __attribute__( ( always_inline, unused ) );
@@ -64,7 +64,7 @@ static void syncTCC( Tcc *TCCx )
     while( TCCx->SYNCBUSY.reg & TCC_SYNCBUSY_MASK )
         ;
 }
-#endif /* SAMD20 */
+#endif /* __SAMD21G18__ */
 
 void enableADC()
 {
@@ -284,150 +284,150 @@ uint32_t analogRead( uint32_t pin )
 // to digital output.
 void analogWrite( uint32_t pin, uint32_t value )
 {
-    PinDescription pinDesc = g_APinDescription[pin];
-    uint32_t       attr = pinDesc.ulPinAttribute;
-
-    if( ( attr & PIN_ATTR_ANALOG ) == PIN_ATTR_ANALOG ) {
-        // DAC handling code
-
-        if( pin != PIN_A0 ) { // Only 1 DAC on A0 (PA02)
-            return;
-        }
-
-        value = mapResolution( value, _writeResolution, 10 );
-
-        syncDAC();
-        DAC->DATA.reg = value & 0x3FF; // DAC on 10 bits.
-        syncDAC();
-        DAC->CTRLA.bit.ENABLE = 0x01; // Enable DAC
-        syncDAC();
-        return;
-    }
-
-    if( ( attr & PIN_ATTR_PWM ) == PIN_ATTR_PWM ) {
-        value = mapResolution( value, _writeResolution, 16 );
-
-        uint32_t tcNum = GetTCNumber( pinDesc.ulPWMChannel );
-        uint8_t  tcChannel = GetTCChannelNumber( pinDesc.ulPWMChannel );
-#ifndef SAMD20
-        static bool tcEnabled[TCC_INST_NUM + TC_INST_NUM];
-#else
-        static bool tcEnabled[TC_INST_NUM];
-#endif /* SAMD20 */
-
-        if( attr & PIN_ATTR_TIMER ) {
-#if !( ARDUINO_SAMD_VARIANT_COMPLIANCE >= 10603 )
-            // Compatibility for cores based on SAMD core <=1.6.2
-            if( pinDesc.ulPinType == PIO_TIMER_ALT ) {
-                pinPeripheral( pin, PIO_TIMER_ALT );
-            }
-            else
-#endif
-            {
-                pinPeripheral( pin, PIO_TIMER );
-            }
-        }
-        else {
-            // We suppose that attr has PIN_ATTR_TIMER_ALT bit set...
-            pinPeripheral( pin, PIO_TIMER_ALT );
-        }
-
-        if( !tcEnabled[tcNum] ) {
-            tcEnabled[tcNum] = true;
-
-            uint16_t GCLK_CLKCTRL_IDs[] = {
-#ifndef SAMD20
-                GCLK_CLKCTRL_ID( GCM_TCC0_TCC1 ), // TCC0
-                GCLK_CLKCTRL_ID( GCM_TCC0_TCC1 ), // TCC1
-                GCLK_CLKCTRL_ID( GCM_TCC2_TC3 ),  // TCC2
-                GCLK_CLKCTRL_ID( GCM_TCC2_TC3 ),  // TC3
-#else
-                GCLK_CLKCTRL_ID( GCM_TC0_TC1 ), // TC0
-                GCLK_CLKCTRL_ID( GCM_TC0_TC1 ), // TC1
-                GCLK_CLKCTRL_ID( GCM_TC2_TC3 ), // TC2
-                GCLK_CLKCTRL_ID( GCM_TC2_TC3 ), // TC3
-#endif                                          /* SAMD20 */
-                GCLK_CLKCTRL_ID( GCM_TC4_TC5 ), // TC4
-                GCLK_CLKCTRL_ID( GCM_TC4_TC5 ), // TC5
-                GCLK_CLKCTRL_ID( GCM_TC6_TC7 ), // TC6
-                GCLK_CLKCTRL_ID( GCM_TC6_TC7 ), // TC7
-            };
-            GCLK->CLKCTRL.reg =
-                ( uint16_t )( GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 |
-                              GCLK_CLKCTRL_IDs[tcNum] );
-            while( GCLK->STATUS.bit.SYNCBUSY == 1 )
-                ;
-
-            // Set PORT
-            if( tcNum >= TCC_INST_NUM ) {
-                // -- Configure TC
-                Tc *TCx = (Tc *)GetTC( pinDesc.ulPWMChannel );
-                // Disable TCx
-                TCx->COUNT16.CTRLA.bit.ENABLE = 0;
-                syncTC_16( TCx );
-                // Set Timer counter Mode to 16 bits, normal PWM
-                TCx->COUNT16.CTRLA.reg |=
-                    TC_CTRLA_MODE_COUNT16 | TC_CTRLA_WAVEGEN_NPWM;
-                syncTC_16( TCx );
-                // Set the initial value
-                TCx->COUNT16.CC[tcChannel].reg = (uint32_t)value;
-                syncTC_16( TCx );
-                // Enable TCx
-                TCx->COUNT16.CTRLA.bit.ENABLE = 1;
-                syncTC_16( TCx );
-            }
-            else {
-#ifndef SAMD20
-                // -- Configure TCC
-                Tcc *TCCx = (Tcc *)GetTC( pinDesc.ulPWMChannel );
-                // Disable TCCx
-                TCCx->CTRLA.bit.ENABLE = 0;
-                syncTCC( TCCx );
-                // Set TCCx as normal PWM
-                TCCx->WAVE.reg |= TCC_WAVE_WAVEGEN_NPWM;
-                syncTCC( TCCx );
-                // Set the initial value
-                TCCx->CC[tcChannel].reg = (uint32_t)value;
-                syncTCC( TCCx );
-                // Set PER to maximum counter value (resolution : 0xFFFF)
-                TCCx->PER.reg = 0xFFFF;
-                syncTCC( TCCx );
-                // Enable TCCx
-                TCCx->CTRLA.bit.ENABLE = 1;
-                syncTCC( TCCx );
-#endif /* SAMD20 */
-            }
-        }
-        else {
-            if( tcNum >= TCC_INST_NUM ) {
-                Tc *TCx = (Tc *)GetTC( pinDesc.ulPWMChannel );
-                TCx->COUNT16.CC[tcChannel].reg = (uint32_t)value;
-                syncTC_16( TCx );
-            }
-            else {
-#ifndef SAMD20
-                Tcc *TCCx = (Tcc *)GetTC( pinDesc.ulPWMChannel );
-                TCCx->CTRLBSET.bit.LUPD = 1;
-                syncTCC( TCCx );
-                TCCx->CCB[tcChannel].reg = (uint32_t)value;
-                syncTCC( TCCx );
-                TCCx->CTRLBCLR.bit.LUPD = 1;
-                syncTCC( TCCx );
-#endif /* SAMD20 */
-            }
-        }
-        return;
-    }
-
-    // -- Defaults to digital write
-    pinMode( pin, OUTPUT );
-    value = mapResolution( value, _writeResolution, 8 );
-    if( value < 128 ) {
-        digitalWrite( pin, LOW );
-    }
-    else {
-        digitalWrite( pin, HIGH );
-    }
+    //PinDescription pinDesc = g_APinDescription[pin];
+    //uint32_t       attr = pinDesc.ulPinAttribute;
+//
+    //if( ( attr & PIN_ATTR_ANALOG ) == PIN_ATTR_ANALOG ) {
+        //// DAC handling code
+//
+        //if( pin != PIN_A0 ) { // Only 1 DAC on A0 (PA02)
+            //return;
+        //}
+//
+        //value = mapResolution( value, _writeResolution, 10 );
+//
+        //syncDAC();
+        //DAC->DATA.reg = value & 0x3FF; // DAC on 10 bits.
+        //syncDAC();
+        //DAC->CTRLA.bit.ENABLE = 0x01; // Enable DAC
+        //syncDAC();
+        //return;
+    //}
+//
+    //if( ( attr & PIN_ATTR_PWM ) == PIN_ATTR_PWM ) {
+        //value = mapResolution( value, _writeResolution, 16 );
+//
+        //uint32_t tcNum = GetTCNumber( pinDesc.ulPWMChannel );
+        //uint8_t  tcChannel = GetTCChannelNumber( pinDesc.ulPWMChannel );
+//#if defined( __SAMD21G18__ )
+        //static bool tcEnabled[TCC_INST_NUM + TC_INST_NUM];
+//#else
+        //static bool tcEnabled[TC_INST_NUM];
+//#endif /* __SAMD21G18__ */
+//
+        //if( attr & PIN_ATTR_TIMER ) {
+//#if !( ARDUINO_SAMD_VARIANT_COMPLIANCE >= 10603 )
+            //// Compatibility for cores based on SAMD core <=1.6.2
+            //if( pinDesc.ulPinType == PIO_TIMER_ALT ) {
+                //pinPeripheral( pin, PIO_TIMER_ALT );
+            //}
+            //else
+//#endif
+            //{
+                //pinPeripheral( pin, PIO_TIMER );
+            //}
+        //}
+        //else {
+            //// We suppose that attr has PIN_ATTR_TIMER_ALT bit set...
+            //pinPeripheral( pin, PIO_TIMER_ALT );
+        //}
+//
+        //if( !tcEnabled[tcNum] ) {
+            //tcEnabled[tcNum] = true;
+//
+            //uint16_t GCLK_CLKCTRL_IDs[] = {
+//#if defined( __SAMD21G18__ )
+                //GCLK_CLKCTRL_ID( GCM_TCC0_TCC1 ), // TCC0
+                //GCLK_CLKCTRL_ID( GCM_TCC0_TCC1 ), // TCC1
+                //GCLK_CLKCTRL_ID( GCM_TCC2_TC3 ),  // TCC2
+                //GCLK_CLKCTRL_ID( GCM_TCC2_TC3 ),  // TC3
+//#else
+                //GCLK_CLKCTRL_ID( GCM_TC0_TC1 ), // TC0
+                //GCLK_CLKCTRL_ID( GCM_TC0_TC1 ), // TC1
+                //GCLK_CLKCTRL_ID( GCM_TC2_TC3 ), // TC2
+                //GCLK_CLKCTRL_ID( GCM_TC2_TC3 ), // TC3
+//#endif /* __SAMD21G18__ */
+                //GCLK_CLKCTRL_ID( GCM_TC4_TC5 ), // TC4
+                //GCLK_CLKCTRL_ID( GCM_TC4_TC5 ), // TC5
+                //GCLK_CLKCTRL_ID( GCM_TC6_TC7 ), // TC6
+                //GCLK_CLKCTRL_ID( GCM_TC6_TC7 ), // TC7
+            //};
+            //GCLK->CLKCTRL.reg =
+                //( uint16_t )( GCLK_CLKCTRL_CLKEN | GCLK_CLKCTRL_GEN_GCLK0 |
+                              //GCLK_CLKCTRL_IDs[tcNum] );
+            //while( GCLK->STATUS.bit.SYNCBUSY == 1 )
+                //;
+//
+            //// Set PORT
+            //if( tcNum >= TCC_INST_NUM ) {
+                //// -- Configure TC
+                //Tc *TCx = (Tc *)GetTC( pinDesc.ulPWMChannel );
+                //// Disable TCx
+                //TCx->COUNT16.CTRLA.bit.ENABLE = 0;
+                //syncTC_16( TCx );
+                //// Set Timer counter Mode to 16 bits, normal PWM
+                //TCx->COUNT16.CTRLA.reg |=
+                    //TC_CTRLA_MODE_COUNT16 | TC_CTRLA_WAVEGEN_NPWM;
+                //syncTC_16( TCx );
+                //// Set the initial value
+                //TCx->COUNT16.CC[tcChannel].reg = (uint32_t)value;
+                //syncTC_16( TCx );
+                //// Enable TCx
+                //TCx->COUNT16.CTRLA.bit.ENABLE = 1;
+                //syncTC_16( TCx );
+            //}
+            //else {
+//#if defined( __SAMD21G18__ )
+                //// -- Configure TCC
+                //Tcc *TCCx = (Tcc *)GetTC( pinDesc.ulPWMChannel );
+                //// Disable TCCx
+                //TCCx->CTRLA.bit.ENABLE = 0;
+                //syncTCC( TCCx );
+                //// Set TCCx as normal PWM
+                //TCCx->WAVE.reg |= TCC_WAVE_WAVEGEN_NPWM;
+                //syncTCC( TCCx );
+                //// Set the initial value
+                //TCCx->CC[tcChannel].reg = (uint32_t)value;
+                //syncTCC( TCCx );
+                //// Set PER to maximum counter value (resolution : 0xFFFF)
+                //TCCx->PER.reg = 0xFFFF;
+                //syncTCC( TCCx );
+                //// Enable TCCx
+                //TCCx->CTRLA.bit.ENABLE = 1;
+                //syncTCC( TCCx );
+//#endif /* __SAMD21G18__ */
+            //}
+        //}
+        //else {
+            //if( tcNum >= TCC_INST_NUM ) {
+                //Tc *TCx = (Tc *)GetTC( pinDesc.ulPWMChannel );
+                //TCx->COUNT16.CC[tcChannel].reg = (uint32_t)value;
+                //syncTC_16( TCx );
+            //}
+            //else {
+//#if defined( __SAMD21G18__ )
+                //Tcc *TCCx = (Tcc *)GetTC( pinDesc.ulPWMChannel );
+                //TCCx->CTRLBSET.bit.LUPD = 1;
+                //syncTCC( TCCx );
+                //TCCx->CCB[tcChannel].reg = (uint32_t)value;
+                //syncTCC( TCCx );
+                //TCCx->CTRLBCLR.bit.LUPD = 1;
+                //syncTCC( TCCx );
+//#endif /* __SAMD21G18__ */
+            //}
+        //}
+        //return;
+    //}
+//
+    //// -- Defaults to digital write
+    //pinMode( pin, OUTPUT );
+    //value = mapResolution( value, _writeResolution, 8 );
+    //if( value < 128 ) {
+        //digitalWrite( pin, LOW );
+    //}
+    //else {
+        //digitalWrite( pin, HIGH );
+    //}
 }
 
 #ifdef __cplusplus
