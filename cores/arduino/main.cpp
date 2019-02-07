@@ -32,6 +32,7 @@ int main( void )
 {
     initRTC();
     initSysTick();
+    changeCPUClk( cpu_clk_dfll48 );
 
     __libc_init_array();
 

@@ -43,6 +43,7 @@ class EEEPROM
     }
 
     void erase( uint16_t addr, uint16_t size );
+    void end();
 
   private:
     uint16_t _minFlashPageSize, _effectivePageSize;

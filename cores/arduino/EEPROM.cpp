@@ -34,26 +34,33 @@
 #include "NVM.h"
 
 EEEPROM::EEEPROM()
-{}
+{
+    _EEEPROMSize = 0;
+    _bankStatus = NULL;
+}
 
 void EEEPROM::begin()
 {
-    NVMParams_t params = getNVMParams();
+    // Do not launch another session of emulated EEPROM, which will cause
+    // _bankStatus to become corrupted if it has already been allocated
+    if( _EEEPROMSize == 0 && _bankStatus == NULL ) {
+        NVMParams_t params = getNVMParams();
 
-    // Flash page characteristics
-    _minFlashPageSize = params.rowSize;
-    _effectivePageSize = _minFlashPageSize - 1;
-    _flashEEEPROMStartAddr = params.nvmTotalSize - params.eepromSize;
+        // Flash page characteristics
+        _minFlashPageSize = params.rowSize;
+        _effectivePageSize = _minFlashPageSize - 1;
+        _flashEEEPROMStartAddr = params.nvmTotalSize - params.eepromSize;
 
-    // Usable memory space
-    _useableMemSize = params.eepromSize;
-    _numUsableBanks = _useableMemSize / _minFlashPageSize;
-    _EEEPROMSize = ( _numUsableBanks / 2 ) * _effectivePageSize;
+        // Usable memory space
+        _useableMemSize = params.eepromSize;
+        _numUsableBanks = _useableMemSize / _minFlashPageSize;
+        _EEEPROMSize = ( _numUsableBanks / 2 ) * _effectivePageSize;
 
-    // Flash bank status indicators
-    _bankStatus = (uint8_t *)malloc( _numUsableBanks );
-    _bankUpToDate = false;
-    _nextBankUp = 0;
+        // Flash bank status indicators
+        _bankStatus = (uint8_t *)malloc( _numUsableBanks );
+        _bankUpToDate = false;
+        _nextBankUp = 0;
+    }
 }
 
 uint16_t EEEPROM::getSize()
@@ -171,4 +178,15 @@ uint32_t EEEPROM::getFlashAddr( uint16_t eeepromAddr )
     }
 
     return addr;
+}
+
+void EEEPROM::end()
+{
+    // Take down everything
+    free( _bankStatus );
+    _bankStatus = NULL;
+
+    _bankUpToDate = false;
+    _nextBankUp = 0;
+    _EEEPROMSize = 0;
 }
