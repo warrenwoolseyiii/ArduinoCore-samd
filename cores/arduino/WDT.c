@@ -25,7 +25,7 @@ uint8_t _isInit = 0;
 
 /* Note: The WDT runs off the 32768 Hz clock source divided by 32, giving the
  * WDT a 1024 Hz clock source. */
-void initWDT( uint32_t wdtPeriod )
+void initWDT( WDTPeriod_t wdtPeriod )
 {
     // Set up the clocks and APB
     initClkGenerator( GCLK_GENCTRL_SRC_XOSC32K_Val, GCLK_GENDIV_ID_GCLK2_Val,

@@ -19,12 +19,29 @@
 #define WDT_H_
 
 #include <stdint.h>
+#include <sam.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void initWDT( uint32_t wdtPeriod );
+typedef enum
+{
+    wdt_8_ms = WDT_CONFIG_PER_8_Val,
+    wdt_16_ms = WDT_CONFIG_PER_16_Val,
+    wdt_32_ms = WDT_CONFIG_PER_32_Val,
+    wdt_64_ms = WDT_CONFIG_PER_64_Val,
+    wdt_128_ms = WDT_CONFIG_PER_128_Val,
+    wdt_256_ms = WDT_CONFIG_PER_256_Val,
+    wdt_512_ms = WDT_CONFIG_PER_512_Val,
+    wdt_1_s = WDT_CONFIG_PER_1K_Val,
+    wdt_2_s = WDT_CONFIG_PER_2K_Val,
+    wdt_4_s = WDT_CONFIG_PER_4K_Val,
+    wdt_8_s = WDT_CONFIG_PER_8K_Val,
+    wdt_16_s = WDT_CONFIG_PER_16K_Val
+} WDTPeriod_t;
+
+void initWDT( WDTPeriod_t wdtPeriod );
 void endWDT();
 void enableWDT();
 void disableWDT();
