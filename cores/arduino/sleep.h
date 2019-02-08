@@ -22,7 +22,8 @@
 
 #define PM_SLEEP_STANDBY_Val 0xFF
 
-typedef enum {
+typedef enum
+{
     cpu_clk_oscm1 = 0x3,
     cpu_clk_oscm2 = 0x2,
     cpu_clk_oscm4 = 0x1,
@@ -30,11 +31,19 @@ typedef enum {
     cpu_clk_dfll48 = 0x4
 } CPUClkSrc_t;
 
+typedef enum
+{
+    _cpu = PM_SLEEP_IDLE_CPU_Val,
+    _cpu_ahb = PM_SLEEP_IDLE_AHB_Val,
+    _cpu_ahb_apb = PM_SLEEP_IDLE_APB_Val,
+    _deep_sleep
+} SleepLevel_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void sleepCPU( uint32_t level );
+void sleepCPU( SleepLevel_t level );
 void changeCPUClk( CPUClkSrc_t src );
 void disableSleep();
 void enableSleep();

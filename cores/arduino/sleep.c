@@ -34,7 +34,7 @@ void enableSleep()
     _sleepEn = 1;
 }
 
-void sleepCPU( uint32_t level )
+void sleepCPU( SleepLevel_t level )
 {
     uint8_t restartSysTick = 0;
     if( _sleepEn ) {

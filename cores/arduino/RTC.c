@@ -109,9 +109,9 @@ void delayRTCSteps( uint64_t steps )
             // Standby.
 #if defined( __SAMD20E18__ )
             if( SERCOM3->USART.CTRLA.bit.ENABLE )
-                sleepCPU( PM_SLEEP_IDLE_CPU_Val );
+                sleepCPU( _cpu );
             else
-                sleepCPU( PM_SLEEP_STANDBY_Val );
+                sleepCPU( _deep_sleep );
 #endif /* __SAMD20E18__ */
             remaining = ( RTC_STEPS_PER_SEC - ( stepsRTC() & 0x7FFF ) );
         }
