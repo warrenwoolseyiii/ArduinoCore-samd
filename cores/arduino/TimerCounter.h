@@ -22,7 +22,21 @@
 #include <stdint.h>
 #include "sam.h"
 
-typedef enum { tc_mode_8_bit, tc_mode_16_bit, tc_mode_32_bit } TCMode_t;
+#if defined( __SAMD20E18__ )
+#define TC0_OUTPIN 0 // TODO
+#define TC1_OUTPIN 0 // TODO
+#define TC2_OUTPIN 5
+#define TC3_OUTPIN 3
+#define TC4_OUTPIN 9
+#define TC5_OUTPIN 1
+#endif /* __SAMD20E18 */
+
+typedef enum
+{
+    tc_mode_8_bit,
+    tc_mode_16_bit,
+    tc_mode_32_bit
+} TCMode_t;
 
 class TimerCounter
 {
@@ -43,6 +57,10 @@ class TimerCounter
     bool     isActive()
     {
         return _isActive;
+    }
+    bool isPaused()
+    {
+        return _isPaused;
     }
     void setPWMDutyCycle( uint8_t dutyCycle );
 

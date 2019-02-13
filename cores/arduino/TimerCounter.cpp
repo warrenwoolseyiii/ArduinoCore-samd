@@ -115,10 +115,10 @@ void TimerCounter::begin( uint32_t frequency, bool output, TCMode_t mode,
     if( useInterrupts ) NVIC_EnableIRQ( (IRQn_Type)_irqn );
     if( output ) {
         switch( _tcNum ) {
-            case 2: pinPeripheral( 5, PIO_TIMER_ALT ); break;
-            case 3: pinPeripheral( 3, PIO_TIMER ); break;
-            case 4: pinPeripheral( 9, PIO_TIMER_ALT ); break;
-            case 5: pinPeripheral( 1, PIO_TIMER_ALT ); break;
+            case 2: pinPeripheral( TC2_OUTPIN, PIO_TIMER_ALT ); break;
+            case 3: pinPeripheral( TC3_OUTPIN, PIO_TIMER ); break;
+            case 4: pinPeripheral( TC4_OUTPIN, PIO_TIMER_ALT ); break;
+            case 5: pinPeripheral( TC5_OUTPIN, PIO_TIMER_ALT ); break;
         }
     }
 
