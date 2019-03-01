@@ -32,57 +32,90 @@
 // SPI_HAS_NOTUSINGINTERRUPT means that SPI has notUsingInterrupt() method
 #define SPI_HAS_NOTUSINGINTERRUPT 1
 
-#define SPI_MODE0 0x02
-#define SPI_MODE1 0x00
-#define SPI_MODE2 0x03
-#define SPI_MODE3 0x01
+typedef struct
+{
+    uint8_t SCK, MISO, MOSI, SS, padTx, padRx;
+} SPIPins_t;
+
+// SPI TX / RX characteristics that are run time programmable
+typedef enum
+{
+    spi_polarity_low = SPI_POLAR_LOW,
+    spi_polarity_high = SPI_POLAR_HIGH
+} SPIPolarity_t;
+
+typedef enum
+{
+    spi_lead_sample = SPI_LD_SAMPLE,
+    spi_lead_change = SPI_LD_CHANGE
+} SPIPhase_t;
+
+typedef enum
+{
+    spi_lsb_first = SPI_LSB_FST,
+    spi_msb_first = SPI_MSB_FST
+} SPIDataOrder_t;
+
+typedef enum
+{
+    spi_data_len_8bit = SPI_8BIT,
+    spi_data_len_9bit = SPI_9BIT
+} SPIDataLength_t;
 
 class SPISettings
 {
   public:
-    SPISettings( uint32_t clock, BitOrder bitOrder, uint8_t dataMode )
-    {
-        if( __builtin_constant_p( clock ) ) {
-            init_AlwaysInline( clock, bitOrder, dataMode );
-        }
-        else {
-            init_MightInline( clock, bitOrder, dataMode );
-        }
-    }
-
-    // Default speed set to 4MHz, SPI mode set to MODE 0 and Bit order set to
-    // MSB first.
     SPISettings()
     {
-        init_AlwaysInline( 4000000, MSBFIRST, SPI_MODE0 );
+        // Default format
+        set( 4000000, spi_polarity_low, spi_lead_sample, spi_msb_first,
+             spi_data_len_8bit );
     }
 
-    void init_MightInline( uint32_t clock, BitOrder bitOrder, uint8_t dataMode )
+    SPISettings( uint32_t clockSpeed, SPIPolarity_t polarity, SPIPhase_t phase,
+                 SPIDataOrder_t dataOrder, SPIDataLength_t dataLength )
     {
-        init_AlwaysInline( clock, bitOrder, dataMode );
+        set( clockSpeed, polarity, phase, dataOrder, dataLength );
     }
 
-    void init_AlwaysInline( uint32_t clock, BitOrder bitOrder,
-                            uint8_t dataMode )
-        __attribute__( ( __always_inline__ ) )
+    void set( uint32_t clockSpeed, SPIPolarity_t polarity, SPIPhase_t phase,
+              SPIDataOrder_t dataOrder, SPIDataLength_t dataLength )
     {
-        this->clockFreq = clock;
+        _clockSpeed = clockSpeed;
+        _polarity = polarity;
+        _phase = phase;
+        _dataOrder = dataOrder;
+        _dataLength = dataLength;
+    }
 
-        this->bitOrder = ( bitOrder == MSBFIRST ? MSB_FIRST : LSB_FIRST );
-
-        switch( dataMode ) {
-            case SPI_MODE0: this->dataMode = SERCOM_SPI_MODE_0; break;
-            case SPI_MODE1: this->dataMode = SERCOM_SPI_MODE_1; break;
-            case SPI_MODE2: this->dataMode = SERCOM_SPI_MODE_2; break;
-            case SPI_MODE3: this->dataMode = SERCOM_SPI_MODE_3; break;
-            default: this->dataMode = SERCOM_SPI_MODE_0; break;
+    SPISettings &operator=( const SPISettings &arg )
+    {
+        if( this != &arg ) {
+            _clockSpeed = arg._clockSpeed;
+            _polarity = arg._polarity;
+            _phase = arg._phase;
+            _dataOrder = arg._dataOrder;
+            _dataLength = arg._dataLength;
         }
+
+        return *this;
+    }
+
+    bool operator==( const SPISettings &arg )
+    {
+        if( this == &arg ) return true;
+        return !( ( _clockSpeed != arg._clockSpeed ) ||
+                  ( _polarity != arg._polarity ) || ( _phase != arg._phase ) ||
+                  ( _dataOrder != arg._dataOrder ) ||
+                  ( _dataLength != arg._dataLength ) );
     }
 
   private:
-    uint32_t           clockFreq;
-    SercomSpiClockMode dataMode;
-    SercomDataOrder    bitOrder;
+    uint32_t        _clockSpeed;
+    SPIPolarity_t   _polarity;
+    SPIPhase_t      _phase;
+    SPIDataOrder_t  _dataOrder;
+    SPIDataLength_t _dataLength;
 
     friend class SPIClass;
 };
@@ -90,10 +123,11 @@ class SPISettings
 class SPIClass
 {
   public:
-    SPIClass( SERCOM *p_sercom, uint8_t uc_pinMISO, uint8_t uc_pinSCK,
-              uint8_t uc_pinMOSI, SercomSpiTXPad, SercomRXPad );
+    SPIClass( SERCOM *sercom, SPIPins_t pins );
+    SPIClass( SERCOM *sercom, uint8_t sckPin, uint8_t misoPin, uint8_t mosiPin,
+              uint8_t ssPin, uint8_t padRxPin, uint8_t padTxPin );
 
-    byte     transfer( uint8_t data );
+    uint8_t  transfer( uint8_t data );
     uint16_t transfer16( uint16_t data );
     void     transfer( void *buf, size_t count );
 
@@ -110,32 +144,20 @@ class SPIClass
     void begin();
     void end();
 
-    void setBitOrder( BitOrder order );
-    void setDataMode( uint8_t uc_mode );
-    void setClockDivider( uint8_t uc_div );
+    void setBitOrder( SPIDataOrder_t order );
+    void setDataMode( SPIPolarity_t pol, SPIPhase_t pha );
+    void setClockDivider( uint8_t div );
 
   private:
-    void init();
-    void config( SPISettings settings );
+    void config( SPISettings settings, bool force = false );
 
-    SERCOM *_p_sercom;
-    uint8_t _uc_pinMiso;
-    uint8_t _uc_pinMosi;
-    uint8_t _uc_pinSCK;
+    SERCOM *    _p_sercom;
+    SPISettings _settings;
+    SPIPins_t   _pins;
 
-    SercomSpiTXPad _padTx;
-    SercomRXPad    _padRx;
-
-    bool     _initialized;
     uint8_t  _interruptMode;
     char     _interruptSave;
     uint32_t _interruptMask;
-
-    // Legacy setup support
-    SPISettings _settingsInternal;
-    uint32_t    _clock;
-    BitOrder    _bitOrder;
-    uint8_t     _dataMode;
 };
 
 #if SPI_INTERFACES_COUNT > 0

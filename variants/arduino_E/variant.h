@@ -121,8 +121,9 @@ static const uint8_t ATN = PIN_ATN;*/
 #define PIN_SPI_MISO ( 21ul )
 #define PIN_SPI_MOSI ( 22ul )
 #define PIN_SPI_SCK ( 23ul )
+#define PIN_SPI_SS ( 0ul ) // TODO: Slave mode imp
 #define PERIPH_SPI sercom1
-#define PAD_SPI_TX SPI_PAD_0_SCK_1
+#define PAD_SPI_TX SPI_TX0_SCK1_SS2
 #define PAD_SPI_RX SERCOM_RX_PAD_3
 
 static const uint8_t SS = ( 7ul ); // SERCOM4 last PAD is present on A2 but HW
@@ -135,8 +136,9 @@ static const uint8_t SCK = PIN_SPI_SCK;
 #define PIN_SPI1_MISO ( 26ul )
 #define PIN_SPI1_MOSI ( 24ul )
 #define PIN_SPI1_SCK ( 25ul )
+#define PIN_SPI1_SS ( 0ul ) // TODO: Slave mode imp
 #define PERIPH_SPI1 sercom0
-#define PAD_SPI1_TX SPI_PAD_0_SCK_1
+#define PAD_SPI1_TX SPI_TX0_SCK1_SS2
 #define PAD_SPI1_RX SERCOM_RX_PAD_3
 
 // Wire

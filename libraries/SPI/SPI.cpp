@@ -26,74 +26,71 @@
 #define SPI_IMODE_EXTINT 1
 #define SPI_IMODE_GLOBAL 2
 
-SPIClass::SPIClass( SERCOM *p_sercom, uint8_t uc_pinMISO, uint8_t uc_pinSCK,
-                    uint8_t uc_pinMOSI, SercomSpiTXPad PadTx,
-                    SercomRXPad PadRx )
+SPIClass::SPIClass( SERCOM *sercom, SPIPins_t pins )
 {
-    _initialized = false;
-    assert( p_sercom != NULL );
-    _p_sercom = p_sercom;
+    _p_sercom = sercom;
+    memcpy( &_pins, &pins, sizeof( SPIPins_t ) );
+}
 
-    // pins
-    _uc_pinMiso = uc_pinMISO;
-    _uc_pinSCK = uc_pinSCK;
-    _uc_pinMosi = uc_pinMOSI;
+SPIClass::SPIClass( SERCOM *sercom, uint8_t sckPin, uint8_t misoPin,
+                    uint8_t mosiPin, uint8_t ssPin, uint8_t padRxPin,
+                    uint8_t padTxPin )
+{
+    _p_sercom = sercom;
 
-    // SERCOM pads
-    _padTx = PadTx;
-    _padRx = PadRx;
-
-    // Default setup
-    _clock = 4000000;
-    _bitOrder = MSBFIRST;
-    _dataMode = SPI_MODE0;
-    _settingsInternal = SPISettings( _clock, _bitOrder, _dataMode );
+    _pins.SCK = sckPin;
+    _pins.MISO = misoPin;
+    _pins.MOSI = mosiPin;
+    _pins.SS = ssPin;
+    _pins.padRx = padRxPin;
+    _pins.padTx = padTxPin;
 }
 
 void SPIClass::begin()
 {
-    init();
-    _settingsInternal.init_AlwaysInline( _clock, _bitOrder, _dataMode );
-    config( _settingsInternal );
-}
-
-void SPIClass::init()
-{
-    if( _initialized ) return;
     _interruptMode = SPI_IMODE_NONE;
     _interruptSave = 0;
     _interruptMask = 0;
-    _initialized = true;
+
+    config( _settings, true );
 }
 
-void SPIClass::config( SPISettings settings )
+void SPIClass::config( SPISettings settings, bool force )
 {
-    // PIO init
-    pinPeripheral( _uc_pinMiso, g_APinDescription[_uc_pinMiso].ulPinType );
-    pinPeripheral( _uc_pinSCK, g_APinDescription[_uc_pinSCK].ulPinType );
-    pinPeripheral( _uc_pinMosi, g_APinDescription[_uc_pinMosi].ulPinType );
+    if( force || !( settings == _settings ) ) {
+        _settings = settings;
 
-    _p_sercom->initSPI( _padTx, _padRx, SPI_CHAR_SIZE_8_BITS,
-                        settings.bitOrder );
-    _p_sercom->initSPIClock( settings.dataMode, settings.clockFreq );
+        // Initialize GPIOs
+        pinPeripheral( _pins.MISO, g_APinDescription[_pins.MISO].ulPinType );
+        pinPeripheral( _pins.SCK, g_APinDescription[_pins.SCK].ulPinType );
+        pinPeripheral( _pins.MOSI, g_APinDescription[_pins.MOSI].ulPinType );
 
-    _p_sercom->enableSPI();
+        // Apply SERCOM SPI settings
+        SercomSPISettings_t config;
+        config.rxPad = (SercomRXPad)_pins.padRx;
+        config.txPad = (SercomSpiTXPad)_pins.padTx;
+        config.baud = _settings._clockSpeed;
+        config.dOrder = _settings._dataOrder;
+        config.dSize = _settings._dataLength;
+        config.pha = _settings._phase;
+        config.pol = _settings._polarity;
+
+        _p_sercom->applySPISettings( config );
+    }
 }
 
 void SPIClass::end()
 {
-    if( _initialized ) {
-        _p_sercom->resetSPI();
-        _p_sercom->endSPI();
-        _initialized = false;
-    }
+    // Take down the peripheral
+    _p_sercom->endSPI();
 
-    pinMode( _uc_pinMiso, OUTPUT );
-    pinMode( _uc_pinSCK, OUTPUT );
-    pinMode( _uc_pinMosi, OUTPUT );
-    digitalWrite( _uc_pinMiso, HIGH );
-    digitalWrite( _uc_pinSCK, HIGH );
-    digitalWrite( _uc_pinMosi, HIGH );
+    // Reconfigure the GPIOs
+    pinMode( _pins.MISO, OUTPUT );
+    pinMode( _pins.SCK, OUTPUT );
+    pinMode( _pins.MOSI, OUTPUT );
+    digitalWrite( _pins.MISO, HIGH );
+    digitalWrite( _pins.MOSI, HIGH );
+    digitalWrite( _pins.SCK, HIGH );
 }
 
 #ifndef interruptsStatus
@@ -171,22 +168,33 @@ void SPIClass::endTransaction( void )
     }
 }
 
-void SPIClass::setBitOrder( BitOrder order )
+void SPIClass::setBitOrder( SPIDataOrder_t order )
 {
-    _bitOrder = order;
+    if( order != _settings._dataOrder ) {
+        _settings._dataOrder = order;
+        config( _settings, true );
+    }
 }
 
-void SPIClass::setDataMode( uint8_t mode )
+void SPIClass::setDataMode( SPIPolarity_t pol, SPIPhase_t pha )
 {
-    _dataMode = mode;
+    if( pol != _settings._polarity || pha != _settings._phase ) {
+        _settings._polarity = pol;
+        _settings._phase = pha;
+        config( _settings, true );
+    }
 }
 
 void SPIClass::setClockDivider( uint8_t div )
 {
-    _clock = SystemCoreClock / div;
+    uint32_t freq = SystemCoreClock / div;
+    if( freq != _settings._clockSpeed ) {
+        _settings._clockSpeed = freq;
+        config( _settings, true );
+    }
 }
 
-byte SPIClass::transfer( uint8_t data )
+uint8_t SPIClass::transfer( uint8_t data )
 {
     return _p_sercom->transferDataSPI( data );
 }
@@ -205,7 +213,7 @@ uint16_t SPIClass::transfer16( uint16_t data )
 
     t.val = data;
 
-    if( _p_sercom->getDataOrderSPI() == LSB_FIRST ) {
+    if( _settings._dataOrder == spi_lsb_first ) {
         t.lsb = transfer( t.lsb );
         t.msb = transfer( t.msb );
     }
@@ -251,12 +259,12 @@ void SPIClass::detachInterrupt()
 #define PAD_SPI_TX SPI_PAD_2_SCK_3
 #define PAD_SPI_RX SERCOM_RX_PAD_0
 #endif // PERIPH_SPI
-SPIClass SPI( &PERIPH_SPI, PIN_SPI_MISO, PIN_SPI_SCK, PIN_SPI_MOSI, PAD_SPI_TX,
-              PAD_SPI_RX );
+SPIClass SPI( &PERIPH_SPI, PIN_SPI_SCK, PIN_SPI_MISO, PIN_SPI_MOSI, PIN_SPI_SS,
+              (uint8_t)PAD_SPI_TX, (uint8_t)PAD_SPI_RX );
 #endif
 #if SPI_INTERFACES_COUNT > 1
-SPIClass SPI1( &PERIPH_SPI1, PIN_SPI1_MISO, PIN_SPI1_SCK, PIN_SPI1_MOSI,
-               PAD_SPI1_TX, PAD_SPI1_RX );
+SPIClass SPI1( &PERIPH_SPI1, PIN_SPI1_SCK, PIN_SPI1_MISO, PIN_SPI1_MOSI,
+               PIN_SPI1_SS, (uint8_t)PAD_SPI1_TX, (uint8_t)PAD_SPI1_RX );
 #endif
 #if SPI_INTERFACES_COUNT > 2
 SPIClass SPI2( &PERIPH_SPI2, PIN_SPI2_MISO, PIN_SPI2_SCK, PIN_SPI2_MOSI,
